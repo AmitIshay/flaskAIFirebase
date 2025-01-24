@@ -9,10 +9,15 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Initialize Firebase
-firebase_key_path = os.getenv("FIREBASE_KEY_PATH")
-cred = credentials.Certificate(firebase_key_path)
-firebase_admin.initialize_app(cred)
+firebase_key = os.getenv("FIREBASE_KEY")
+if firebase_key:
+    try:
+        cred = credentials.Certificate(json.loads(firebase_key))
+        firebase_admin.initialize_app(cred)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Error parsing Firebase key: {str(e)}")
+else:
+    raise ValueError("Firebase key is missing in environment variables.")
 
 
 # חיבור למסד נתונים Firestore
