@@ -7,9 +7,9 @@ venv/
 *.pyd
 
 # Exclude large JSON files
-*.json
+# *.json
 # Allow vercel.json to be included
-!vercel.json
+# !vercel.json
 
 # Exclude environment variables
 .env
