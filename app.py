@@ -9,32 +9,21 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# שליפת המפתח הפרטי וההגדרות מהסביבה
-firebase_private_key = os.getenv("FIREBASE_PRIVATE_KEY")
-if firebase_private_key:
-    try:
-        # שימור המפתח כמשתנה בקובץ JSON בתוך המילה "private_key"
-        private_key_json = {
-            "type": os.getenv("FIREBASE_TYPE"),
-            "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-            "private_key_id": os.getenv("FIREBASE_KEY_PRIVATE_KEY_ID"),
-            "private_key": firebase_private_key.replace("\\n", "\n"),  # מבטיח שהשורות יישארו מופרדות נכון
-            "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-            "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-            "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-            "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-            "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_X509_CERT_URL"),
-            "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL")
-        }
-
-        # ייבוא המפתח באמצעות credentials.Certificate
-        cred = credentials.Certificate(private_key_json)
-        firebase_admin.initialize_app(cred)
-
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Error parsing Firebase key: {str(e)}")
-else:
-    raise ValueError("Firebase key is missing in environment variables.")
+# Initialize Firebase
+cred = credentials.Certificate({
+    "type": os.getenv("FIREBASE_TYPE"),
+    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
+    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
+    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+    "client_id": os.getenv("FIREBASE_CLIENT_ID"),
+    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
+    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
+    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
+    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL"),
+    "universe_domain": os.getenv("FIREBASE_UNIVERSE_DOMAIN")
+})
+firebase_admin.initialize_app(cred)
 
 # חיבור למסד נתונים Firestore
 db = firestore.client()
