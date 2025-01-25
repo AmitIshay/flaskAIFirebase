@@ -5,28 +5,34 @@ from flask_cors import CORS
 import openai
 import os, json
 from dotenv import load_dotenv
-
+from pymongo import MongoClient
 # Load environment variables
 load_dotenv()
+# קבלת ה-MongoDB URI מתוך .env
+MONGO_URI = os.getenv("MONGO_URI")
 
-# Initialize Firebase
-cred = credentials.Certificate({
-    "type": os.getenv("FIREBASE_TYPE"),
-    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
-    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL"),
-    "universe_domain": os.getenv("FIREBASE_UNIVERSE_DOMAIN")
-})
-firebase_admin.initialize_app(cred)
+# חיבור למסד הנתונים
+client = MongoClient(MONGO_URI)
+db = client['sample_mflix']
+questions_collection = db["questions"]
+# # Initialize Firebase
+# cred = credentials.Certificate({
+#     "type": os.getenv("FIREBASE_TYPE"),
+#     "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+#     "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
+#     "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
+#     "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+#     "client_id": os.getenv("FIREBASE_CLIENT_ID"),
+#     "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
+#     "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
+#     "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
+#     "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL"),
+#     "universe_domain": os.getenv("FIREBASE_UNIVERSE_DOMAIN")
+# })
+# firebase_admin.initialize_app(cred)
 
-# חיבור למסד נתונים Firestore
-db = firestore.client()
+# # חיבור למסד נתונים Firestore
+# db = firestore.client()
 
 # אתחול OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -96,12 +102,10 @@ def get_questions():
         else:
             return jsonify({"message": "Failed to generate question using AI. Please try again."}), 500
 
-    # אם לא רוצים שאלה מ-AI, שליפת שאלות מ-Firebase
+    # אם לא רוצים שאלה מ-AI, שליפת שאלות מ-MongoDB
     try:
-        questions_ref = db.collection("questions")
-        query = questions_ref.where("level", "==", level).stream()  # שליפת שאלות לפי רמת קושי
-
-        questions = [q.to_dict() for q in query]  # המרת השאלות לפורמט דיקט
+        # חיפוש בקולקציה לפי רמת קושי
+        questions = list(questions_collection.find({"level": level}, {"_id": 0}))  # הסתרת השדה _id
 
         if questions:
             return jsonify(questions)  # החזרת השאלות
@@ -111,6 +115,43 @@ def get_questions():
         # הדפסת פרטי השגיאה
         print(f"Error occurred: {str(e)}")  # הדפס את השגיאה בקונסול
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500  # החזרת השגיאה למשתמש
+
+
+# @app.route("/getQuestions", methods=["GET"])
+# def get_questions():
+#     # קבלת רמת הקושי מהפרמטר של ה-URL
+#     level = request.args.get("level", "medium").lower()
+
+#     # בדיקת רמת קושי חוקית
+#     valid_levels = {"easy", "medium", "hard"}
+#     if level not in valid_levels:
+#         return jsonify({"message": f"Invalid level: {level}. Valid levels are {valid_levels}"}), 400
+
+#     # בדיקת אם רוצים שאלה מ-AI
+#     use_ai = request.args.get("use_ai", "false").lower() == "true"
+
+#     if use_ai:
+#         question_data = generate_question(level)
+#         if question_data:
+#             return jsonify([question_data])  # החזר רשימה עם שאלה אחת
+#         else:
+#             return jsonify({"message": "Failed to generate question using AI. Please try again."}), 500
+
+#     # אם לא רוצים שאלה מ-AI, שליפת שאלות מ-Firebase
+#     try:
+#         questions_ref = db.collection("questions")
+#         query = questions_ref.where("level", "==", level).stream()  # שליפת שאלות לפי רמת קושי
+
+#         questions = [q.to_dict() for q in query]  # המרת השאלות לפורמט דיקט
+
+#         if questions:
+#             return jsonify(questions)  # החזרת השאלות
+#         else:
+#             return jsonify({"message": "No questions found for this level"}), 404
+#     except Exception as e:
+#         # הדפסת פרטי השגיאה
+#         print(f"Error occurred: {str(e)}")  # הדפס את השגיאה בקונסול
+#         return jsonify({"message": f"An error occurred: {str(e)}"}), 500  # החזרת השגיאה למשתמש
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
