@@ -82,6 +82,14 @@ def generate_question(level):
         print(f"Error during AI question generation: {str(e)}")
         return None
 
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Welcome to the Trivia API"}), 200
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
+
 @app.route("/getQuestions", methods=["GET"])
 def get_questions():
     # קבלת רמת הקושי מהפרמטר של ה-URL
